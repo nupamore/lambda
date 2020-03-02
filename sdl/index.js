@@ -1,15 +1,10 @@
 const mysql = require('mysql2/promise')
 
 const query = `
-    SELECT channel_id, file_id, file_name
-    FROM discord_images
-    WHERE guild_id = ?
-    ORDER BY rand() limit 1;
+    SELECT target
+    FROM simple_dynamic_link
+    WHERE link_id = ?;
 `
-
-function imgUrl(channel_id, file_id, file_name) {
-    return `https://cdn.discordapp.com/attachments/${channel_id}/${file_id}/${file_name}`
-}
 
 async function image(event) {
     const connection = await mysql.createConnection({
@@ -21,20 +16,20 @@ async function image(event) {
     })
     const response = {}
     try {
-        const [rows] = await connection.query(query, event.params.path.guildId)
+        const [rows] = await connection.query(query, event.params.path.linkId)
         if (!rows.length) {
             response.statusCode = 404
-            response.body = JSON.stringify(`Couldn't find any image`)
+            response.body = JSON.stringify(`Couldn't find target`)
         } else {
-            const { channel_id, file_id, file_name } = rows[0]
-            const url = imgUrl(channel_id, file_id, file_name)
+            const { target } = rows[0]
             response.statusCode = 302
-            response.headers = { Location: url }
+            response.headers = { Location: target }
         }
     } catch (err) {
         response.statusCode = 400
         response.body = JSON.stringify(err)
     }
+    connection.end()
     return response
 }
 
